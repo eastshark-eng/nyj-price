@@ -88,9 +88,9 @@ const won=v=>v.toLocaleString("ko-KR");
 let cur=0;
 
 function mark(x,y,shape,color,hollow,r){
-  r=r||5; const a={fill:hollow?"var(--surface-1)":color,stroke:color,
-    "stroke-width":hollow?2:2, "vector-effect":"non-scaling-stroke"};
-  if(!hollow) a.stroke="var(--surface-1)";      // 2px surface ring on filled marks
+  r=r||3.4; const a={fill:hollow?"var(--surface-1)":color,stroke:color,
+    "stroke-width":hollow?1.6:1.2, "vector-effect":"non-scaling-stroke"};
+  if(!hollow) a.stroke="var(--surface-1)";      // 얇은 서피스 링 - 선이 가려지지 않게
   if(shape==="circle") return el("circle",{cx:x,cy:y,r:r,...a});
   if(shape==="square") return el("rect",{x:x-r,y:y-r,width:2*r,height:2*r,rx:1,...a});
   if(shape==="diamond") return el("polygon",{points:`${x},${y-r-1} ${x+r+1},${y} ${x},${y+r+1} ${x-r-1},${y}`,...a});
@@ -158,9 +158,11 @@ function draw(){
     t.textContent=d.slice(5).replace("-","/");svg.appendChild(t);});
 
   const ends=[], tags=[];
+  const multiOrigin=new Set(lines.map(l=>l.origin)).size>1;
   lines.forEach(L=>{
-    const c=COLOR[L.shop], sh=SHAPE[L.origin]||"circle", dash=DASH[L.origin]||"";
-    const thin=L.rank>0, lw=thin?1.2:2, mr=thin?4:5.5;   // 2번·3번(작은 것)은 가늘게
+    const c=COLOR[L.shop], sh=SHAPE[L.origin]||"circle";
+    const dash=multiOrigin?(DASH[L.origin]||""):"";
+    const thin=L.rank>0, lw=thin?1.5:2.4, mr=thin?2.8:3.6;  // 2번·3번(작은 것)은 가늘게
     let seg=[];
     const flush=()=>{if(seg.length>1){const a={d:"M"+seg.map(p=>xs(p.d)+" "+ys(p.p)).join("L"),
       fill:"none",stroke:c,"stroke-width":2,"stroke-linejoin":"round",opacity:.9};
@@ -172,7 +174,7 @@ function draw(){
     L.pts.forEach(p=>{
       svg.appendChild(mark(xs(p.d),ys(p.p),sh,c,L.wild,mr));
       if(p.flag){
-        svg.appendChild(el("circle",{cx:xs(p.d),cy:ys(p.p),r:9.5,fill:"none",stroke:c,
+        svg.appendChild(el("circle",{cx:xs(p.d),cy:ys(p.p),r:7,fill:"none",stroke:c,
           "stroke-width":1.5,"stroke-dasharray":"3 2"}));
         const tag=p.flag+p.size;
         if(tag!==lastTag) tags.push({x:xs(p.d),y:ys(p.p)-14,
@@ -182,7 +184,7 @@ function draw(){
       } else lastTag=null;
     });
     const last=L.pts[L.pts.length-1];
-    ends.push({L,x:xs(last.d)+11,y:ys(last.p)+4,c,sh});
+    ends.push({L,x:xs(last.d)+18,y:ys(last.p)+4,c,sh,mx:xs(last.d)+9});
   });
   // 규격 라벨끼리 겹치면 위로 밀어 올린다(가로로 가까운 것만 비교)
   const placed=[];
@@ -202,7 +204,11 @@ function draw(){
   // "일본산"을 세 번 적으면 정보가 0이므로 그때는 가게 이름을 적는다.
   const variants=new Set(lines.map(l=>[l.origin,l.wild?"자연산":"",l.region]
     .filter(Boolean).join(" ")));
-  if(!MOBILE) ends.forEach(e=>{const t=el("text",{x:e.x,y:e.y,fill:"var(--text-secondary)","font-size":10.5});
+  // 같은 글씨(예: "국내산 제주 1번")가 가게별로 여러 번 나오므로 색 표식을 앞에 둔다.
+  // 글씨 자체에 색을 입히지 않는 것은 색맹 대비 - 표식이 정체성을 진다.
+  if(!MOBILE) ends.forEach(e=>{
+    svg.appendChild(mark(e.mx,e.y-3.5,e.sh,e.c,e.L.wild,3));
+    const t=el("text",{x:e.x,y:e.y,fill:"var(--text-secondary)","font-size":10.5});
     const desc=[e.L.origin,e.L.wild?"자연산":"",e.L.region].filter(Boolean).join(" ");
     const rk=e.L.nranks>1? " "+(e.L.rank+1)+"번":"";
     t.textContent = (variants.size>1 ? desc : e.L.shop)+rk;
