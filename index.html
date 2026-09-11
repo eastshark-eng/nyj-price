@@ -101,8 +101,8 @@ const won=v=>v.toLocaleString("ko-KR");
 let cur=0;
 
 function mark(x,y,shape,color,hollow,r){
-  r=r||3.4; const a={fill:hollow?"var(--surface-1)":color,stroke:color,
-    "stroke-width":hollow?1.6:1.2, "vector-effect":"non-scaling-stroke"};
+  r=r||2.2; const a={fill:hollow?"var(--surface-1)":color,stroke:color,
+    "stroke-width":hollow?1.2:0.8, "vector-effect":"non-scaling-stroke"};
   if(!hollow) a.stroke="var(--surface-1)";      // 얇은 서피스 링 - 선이 가려지지 않게
   if(shape==="circle") return el("circle",{cx:x,cy:y,r:r,...a});
   if(shape==="square") return el("rect",{x:x-r,y:y-r,width:2*r,height:2*r,rx:1,...a});
@@ -174,7 +174,9 @@ function draw(){
 
   lines.forEach(L=>{
     const c=COLOR[L.shop], sh="circle", dash="";
-    const thin=L.rank>0, lw=thin?1.5:2.4, mr=thin?2.8:3.6;  // 2번·3번(작은 것)은 가늘게
+    // 점은 날짜마다 찍혀서 크면 선을 덮는다. 입고일이 적은 계열만 조금 크게.
+    const thin=L.rank>0, lw=thin?1.5:2.4;
+    const mr=(L.pts.length>20? (thin?1.7:2.1) : (thin?2.2:2.8));
     let seg=[];
     const flush=()=>{if(seg.length>1){const a={
       d:smoothPath(seg.map(p=>({x:xs(p.d),y:ys(p.p)}))),
@@ -187,8 +189,8 @@ function draw(){
       svg.appendChild(mark(xs(p.d),ys(p.p),sh,c,L.wild,mr));
       // 규격이 평소와 많이 다른 날: 옅은 테두리만 두고 숫자는 tooltip 에서 본다
       if(p.flag)
-        svg.appendChild(el("circle",{cx:xs(p.d),cy:ys(p.p),r:6.5,fill:"none",
-          stroke:c,"stroke-width":1,opacity:.45}));
+        svg.appendChild(el("circle",{cx:xs(p.d),cy:ys(p.p),r:5,fill:"none",
+          stroke:c,"stroke-width":0.9,opacity:.5}));
     });
     const last=L.pts[L.pts.length-1];
     ends.push({L,x:xs(last.d)+18,y:ys(last.p)+4,c,sh,mx:xs(last.d)+9});
@@ -203,7 +205,7 @@ function draw(){
   // 같은 글씨(예: "국내산 제주 1번")가 가게별로 여러 번 나오므로 색 표식을 앞에 둔다.
   // 글씨 자체에 색을 입히지 않는 것은 색맹 대비 - 표식이 정체성을 진다.
   if(!MOBILE) ends.forEach(e=>{
-    svg.appendChild(mark(e.mx,e.y-3.5,"circle",e.c,e.L.wild,3));
+    svg.appendChild(mark(e.mx,e.y-3.5,"circle",e.c,e.L.wild,2.6));
     const t=el("text",{x:e.x,y:e.y,fill:"var(--text-secondary)","font-size":10.5});
     t.textContent = variants.size>1 ? (e.L.desc || e.L.shop) : e.L.shop;
     svg.appendChild(t);});
