@@ -157,7 +157,7 @@ function draw(){
     const t=el("text",{x:xs(d),y:H-M.b+16,"text-anchor":"middle",fill:"var(--text-muted)","font-size":11});
     t.textContent=d.slice(5).replace("-","/");svg.appendChild(t);});
 
-  const ends=[], tags=[];
+  const ends=[];
   const multiOrigin=new Set(lines.map(l=>l.origin)).size>1;
   lines.forEach(L=>{
     const c=COLOR[L.shop], sh=SHAPE[L.origin]||"circle";
@@ -170,36 +170,20 @@ function draw(){
     L.pts.forEach((p,i)=>{ if(i&&DATES.indexOf(p.d)-DATES.indexOf(L.pts[i-1].d)>GAP) flush();
       seg.push(p); });
     flush();
-    let lastTag=null;
     L.pts.forEach(p=>{
       svg.appendChild(mark(xs(p.d),ys(p.p),sh,c,L.wild,mr));
-      if(p.flag){
-        svg.appendChild(el("circle",{cx:xs(p.d),cy:ys(p.p),r:7,fill:"none",stroke:c,
-          "stroke-width":1.5,"stroke-dasharray":"3 2"}));
-        const tag=p.flag+p.size;
-        if(tag!==lastTag) tags.push({x:xs(p.d),y:ys(p.p)-14,
-          txt:(p.flag==="big"?"▲":"▼")+p.size+s.unit
-              +(p.dev!=null?" ("+(p.dev>0?"+":"")+Math.round(p.dev)+"%)":"")});
-        lastTag=tag;
-      } else lastTag=null;
+      // 규격이 평소와 많이 다른 날: 옅은 테두리만 두고 숫자는 tooltip 에서 본다
+      if(p.flag)
+        svg.appendChild(el("circle",{cx:xs(p.d),cy:ys(p.p),r:6.5,fill:"none",
+          stroke:c,"stroke-width":1,opacity:.45}));
     });
     const last=L.pts[L.pts.length-1];
     ends.push({L,x:xs(last.d)+18,y:ys(last.p)+4,c,sh,mx:xs(last.d)+9});
   });
-  // 규격 라벨끼리 겹치면 위로 밀어 올린다(가로로 가까운 것만 비교)
-  const placed=[];
-  tags.forEach(t=>{
-    let y=t.y, guard=0;
-    while(guard++<12 && placed.some(q=>Math.abs(q.x-t.x)<58 && Math.abs(q.y-y)<12)) y-=12;
-    placed.push({x:t.x,y});
-    const e=el("text",{x:t.x,y:y,"text-anchor":"middle",fill:"var(--text-secondary)",
-      "font-size":10.5}); e.textContent=t.txt; svg.appendChild(e);
-  });
   ends.sort((a,b)=>a.y-b.y);
   for(let i=1;i<ends.length;i++) if(ends[i].y-ends[i-1].y<12) ends[i].y=ends[i-1].y+12;
   // 끝 라벨이 규격 라벨과 겹치면 아래로 비킨다(규격 라벨을 먼저 배치했다)
-  ends.forEach(e=>{ let guard=0;
-    while(guard++<10 && placed.some(q=>Math.abs(q.x-e.x)<62 && Math.abs(q.y-e.y)<12)) e.y+=12; });
+
   // 끝 라벨은 그 선을 구분해주는 것만 적는다. 원산지가 하나뿐인 차트에서
   // "일본산"을 세 번 적으면 정보가 0이므로 그때는 가게 이름을 적는다.
   const variants=new Set(lines.map(l=>[l.origin,l.wild?"자연산":"",l.region]
@@ -233,8 +217,8 @@ function draw(){
   document.getElementById("note").textContent=
     ((typ.length && !MOBILE)? "평소 규격 — "+typ.join(" · ")+"\n":"")
     + "점 = 매물 하나 (같은 날 규격이 다르면 따로 찍는다. 굵은 선 = 큰 것, 얇은 선 = 작은 것)"
-    + " · ▲▼ 는 평소 규격보다 25% 이상 크거나 작은 날(그날 규격과 평소 대비 %)"
-    + " · 입고가 3일 넘게 빈 구간은 선을 잇지 않음";
+    + " · 옅은 테두리가 있는 점은 평소보다 25% 이상 크거나 작은 규격 - 점 위에 커서를 올리면"
+    + " 그날 규격과 평소 대비 %가 나온다 · 입고가 3일 넘게 빈 구간은 선을 잇지 않음";
 
   const hair=el("line",{y1:M.t,y2:M.t+ih,stroke:"var(--text-muted)","stroke-width":1,opacity:0});
   svg.appendChild(hair);
@@ -259,9 +243,11 @@ function draw(){
       n.textContent=L.label+(p.sold?" · 마감":"");
       row.append(k,v,n); tip.appendChild(row);
       if(p.size){ const sz=document.createElement("div"); sz.className="sub";
-        sz.textContent="규격 "+p.size+s.unit
+        const mark2=p.flag==="big"?"▲ ":p.flag==="small"?"▼ ":"";
+        sz.textContent=mark2+"규격 "+p.size+s.unit
           +(L.typical? " · 평소 "+L.typical+s.unit:"")
           +(p.dev!=null? " ("+(p.dev>0?"+":"")+Math.round(p.dev)+"%)":"");
+        if(p.flag) sz.style.color="var(--text-primary)";
         tip.appendChild(sz); }
       p.list.forEach(L2=>{const sd=document.createElement("div"); sd.className="sub";
         sd.textContent=[L2.v,L2.s,won(L2.p)+"원"+(L2.so?" 마감":"")].filter(Boolean).join(" · ");
